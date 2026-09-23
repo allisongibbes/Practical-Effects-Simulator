@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practical Effects Simulator</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2f;
+            --panel-bg: #2a2a40;
+            --text-color: #f0f0f5;
+            --accent: #ff4757;
+            --button-hover: #ff6b81;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .panel {
+            background-color: var(--panel-bg);
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { 
+            text-align: center; 
+            margin-top: 0; 
+            margin-bottom: 5px;
+        }
+        p.description {
+            font-size: 14px; 
+            text-align: center; 
+            margin-bottom: 20px;
+            color: #b0b0c0;
+        }
+        /* Movie Set (Stage) */
+        .stage {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(to bottom, #4a4e69 0%, #22223b 100%);
+            border: 4px solid #111;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        /* Props */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background: #3e2723; /* Dirt */
+            z-index: 2;
+        }
+        .miniature-building {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 60px;
+            z-index: 3;
+            transition: transform 0.1s;
+        }
+        /* Practical Effects Elements */
+        .animatronic {
+            position: absolute;
+            bottom: 40px;
+            right: -100px; /* Hidden off-screen */
+            font-size: 80px;
+            z-index: 4;
+            transition: right 1s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s;
+        }
+        .animatronic.active {
+            right: 20px;
+            transform: rotate(-15deg);
+        }
+        .explosion {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-size: 100px;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .explosion.active {
+            animation: boom 0.8s ease-out forwards;
+        }
+        @keyframes boom {
+            0% { transform: translateX(-50%) scale(0); opacity: 1; }
+            50% { transform: translateX(-50%) scale(1.5); opacity: 1; }
+            100% { transform: translateX(-50%) scale(2); opacity: 0; }
+        }
+        /* Rain System */
+        .rain-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: none;
+        }
+        .rain-container.active {
+            display: block;
+        }
+        .drop {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+            width: 2px;
+            height: 15px;
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            to { transform: translateY(250px); }
+        }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.1s;
+            flex: 1 1 calc(33% - 20px);
+            min-width: 120px;
+        }
+        button:hover { background-color: var(--button-hover); }
+        button:active { transform: scale(0.95); }
+        button.active-toggle { background-color: #2ecc71; }
+        
+    </style>
+</head>
+<body>
+
+    <div class="panel">
+        <h2>Practical Effects Live Set</h2>
+        <p class="description">You are the SFX Supervisor. Trigger physical effects happening live in front of the camera.</p>
+        
+        <div class="stage" id="stage">
+            <div class="rain-container" id="rainContainer"></div>
+            <div class="miniature-building" id="building">🏭</div>
+            <div class="explosion" id="explosion">💥</div>
+            <div class="animatronic" id="animatronic">🦖</div>
+            <div class="ground"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="btnPyrotechnics">Trigger Pyrotechnics</button>
+            <button id="btnWeather">Toggle Fake Rain</button>
+            <button id="btnAnimatronic">Cue Animatronic</button>
+        </div>
+    </div>
+
+    <script>
+        // 1. Pyrotechnics (Explosion & Miniature Destruction)
+        const btnPyrotechnics = document.getElementById('btnPyrotechnics');
+        const explosion = document.getElementById('explosion');
+        const building = document.getElementById('building');
+
+        btnPyrotechnics.addEventListener('click', () => {
+            // Remove active class to reset animation if clicked quickly
+            explosion.classList.remove('active');
+            void explosion.offsetWidth; // Trigger reflow
+            
+            // Trigger explosion
+            explosion.classList.add('active');
+            
+            // Shake the miniature building to simulate a physical reaction
+            building.style.transform = 'translateX(-50%) rotate(15deg)';
+            setTimeout(() => { building.style.transform = 'translateX(-50%) rotate(-10deg)'; }, 100);
+            setTimeout(() => { building.style.transform = 'translateX(-50%) rotate(5deg)'; }, 200);
+            setTimeout(() => { building.style.transform = 'translateX(-50%) rotate(0deg)'; }, 300);
+        });
+
+        // 2. Weather Machine (Fake Rain)
+        const btnWeather = document.getElementById('btnWeather');
+        const rainContainer = document.getElementById('rainContainer');
+        let isRaining = false;
+
+        // Generate rain drops
+        for (let i = 0; i < 50; i++) {
+            const drop = document.createElement('div');
+            drop.classList.add('drop');
+            drop.style.left = `${Math.random() * 100}%`;
+            drop.style.top = `${Math.random() * -100}px`;
+            drop.style.animationDuration = `${Math.random() * 0.5 + 0.5}s`;
+            drop.style.animationDelay = `${Math.random() * 2}s`;
+            rainContainer.appendChild(drop);
+        }
+
+        btnWeather.addEventListener('click', () => {
+            isRaining = !isRaining;
+            if (isRaining) {
+                rainContainer.classList.add('active');
+                btnWeather.classList.add('active-toggle');
+                btnWeather.textContent = 'Stop Rain';
+            } else {
+                rainContainer.classList.remove('active');
+                btnWeather.classList.remove('active-toggle');
+                btnWeather.textContent = 'Toggle Fake Rain';
+            }
+        });
+
+        // 3. Animatronics (Robot Dinosaur)
+        const btnAnimatronic = document.getElementById('btnAnimatronic');
+        const animatronic = document.getElementById('animatronic');
+        let isAnimatronicOnScreen = false;
+
+        btnAnimatronic.addEventListener('click', () => {
+            if (!isAnimatronicOnScreen) {
+                animatronic.classList.add('active');
+                btnAnimatronic.textContent = 'Reset Animatronic';
+                btnAnimatronic.classList.add('active-toggle');
+            } else {
+                animatronic.classList.remove('active');
+                btnAnimatronic.textContent = 'Cue Animatronic';
+                btnAnimatronic.classList.remove('active-toggle');
+            }
+            isAnimatronicOnScreen = !isAnimatronicOnScreen;
+        });
+    </script>
+</body>
+</html>
